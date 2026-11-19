@@ -1,0 +1,419 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>QuestCreative</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#10151b;color:#f4f6f8;font-family:system-ui;overflow:hidden}
+button,input{font:inherit}
+button{border:0;border-radius:12px;padding:12px 16px;font-weight:800;background:#77dc87;color:#0c1710;cursor:pointer}
+button.secondary{background:#2a333d;color:white}
+button.danger{background:#44282c;color:#ffc2c6}
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 20%,#263541,#11161c 65%);padding:18px}
+.panel{width:min(520px,100%);background:#1a222b;border:1px solid #384551;border-radius:22px;padding:22px}
+.brand{display:flex;gap:12px;align-items:center;margin-bottom:20px}
+.logo{width:46px;height:46px;border-radius:14px;background:#78dc87;color:#09140d;display:grid;place-items:center;font-weight:1000}
+.brand h1{margin:0;font-size:25px}
+.sub{color:#aab6c1;font-size:14px;margin-top:4px}
+.stack{display:grid;gap:10px;margin-top:15px}
+.field{margin:12px 0}
+.field label{display:block;font-size:13px;color:#b5c0ca;margin-bottom:6px}
+.field input{width:100%;border-radius:12px;border:1px solid #3a4652;background:#10161c;color:white;padding:13px;outline:none}
+.field input:focus{border-color:#78dc87}
+.small{font-size:12px;color:#98a5b1;line-height:1.7}
+.hide{display:none!important}
+#game{position:fixed;inset:0;background:#80a9ce}
+#view{width:100%;height:100%;display:block}
+#topHud{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start}
+.hudbox{background:#111a20d9;border:1px solid #35434e;border-radius:12px;padding:9px 12px;font-size:13px}
+.hudbox b{color:#83e293}
+#menuBtn{padding:9px 12px;background:#222e37;color:white;border:1px solid #465560}
+#cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:white;font-size:24px;text-shadow:0 1px 3px black;pointer-events:none}
+#hotbar{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:5px;padding:6px;background:#101820d9;border:1px solid #42505b;border-radius:14px;max-width:96vw}
+.slot{width:48px;height:48px;border:2px solid #46525d;border-radius:9px;background:#202a32;display:grid;place-items:center;font-size:24px;position:relative;color:white}
+.slot.active{border-color:#8bea99;box-shadow:0 0 0 2px #8bea9940}
+.slot span{position:absolute;bottom:1px;right:3px;font-size:9px;color:#cbd5dd}
+.mobile{display:none;position:absolute;bottom:85px;pointer-events:none}
+.mobile button{pointer-events:auto;background:#19232bd9;border:1px solid #66717c;color:white;width:56px;height:56px;padding:0;border-radius:16px;touch-action:none}
+.pad{left:18px;display:grid;grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px 56px;gap:5px}
+.pad .up{grid-column:2;grid-row:1}
+.pad .left{grid-column:1;grid-row:2}
+.pad .down{grid-column:2;grid-row:2}
+.pad .right{grid-column:3;grid-row:2}
+.pad .jump{grid-column:2;grid-row:3;background:#275f39}
+.actions{right:18px;display:flex;flex-direction:column;gap:9px}
+.actions button{width:60px;height:60px}
+.actions .break{background:#704b2e}
+.actions .place{background:#285d39}
+.touchhint{position:absolute;bottom:160px;right:18px;color:#ffffff99;font-size:11px}
+.modal{position:absolute;inset:0;background:#080c10bb;display:flex;align-items:center;justify-content:center;padding:15px}
+.modal .panel{max-height:90vh;overflow:auto}
+.range{width:100%}
+@media(hover:none),(max-width:800px){.mobile{display:grid}}
+@media(max-width:430px){.slot{width:41px;height:43px}.panel{padding:18px}}
+</style>
+</head>
+<body>
+
+<div id="mainMenu" class="screen">
+ <div class="panel">
+  <div class="brand">
+   <div class="logo">QC</div>
+   <div>
+    <h1>QuestCreative</h1>
+    <div class="sub">عالمك الإبداعي — نسخة تجريبية</div>
+   </div>
+  </div>
+  <div class="field">
+   <label>اسم اللاعب</label>
+   <input id="playerName" maxlength="18" placeholder="اكتب اسمك" value="Guest">
+  </div>
+  <div class="stack">
+   <button id="guestPlay">Play with Guest — اللعب كضيف</button>
+   <button class="secondary" id="optionsBtn">الإعدادات ⚙️</button>
+  </div>
+  <p class="small">اللعب كضيف لا يحتاج حسابًا أو Backend. هذه نسخة تجريبية.</p>
+ </div>
+</div>
+
+<div id="game" class="hide">
+ <canvas id="view"></canvas>
+ <div id="cross">+</div>
+ <div id="topHud">
+  <div class="hudbox">QuestCreative <b id="playerLabel">Guest</b></div>
+  <button id="menuBtn">☰ القائمة</button>
+ </div>
+ <div id="hotbar"></div>
+
+ <div class="mobile pad" id="pad">
+  <button class="up" data-move="forward">▲</button>
+  <button class="left" data-move="left">◀</button>
+  <button class="down" data-move="back">▼</button>
+  <button class="right" data-move="right">▶</button>
+  <button class="jump" data-move="jump">قفز</button>
+ </div>
+
+ <div class="mobile actions">
+  <button class="break" id="breakBtn">⛏️</button>
+  <button class="place" id="placeBtn">▣</button>
+ </div>
+ <div class="touchhint">اسحب الشاشة لتحريك الكاميرا</div>
+</div>
+
+<div id="optionsModal" class="modal hide">
+ <div class="panel">
+  <h2>الإعدادات</h2>
+  <div class="field">
+   <label>زاوية الرؤية FOV: <span id="fovVal">75</span></label>
+   <input id="fov" class="range" type="range" min="55" max="105" value="75">
+  </div>
+  <div class="field">
+   <label>حساسية الكاميرا: <span id="sensVal">1</span></label>
+   <input id="sens" class="range" type="range" min="0.3" max="2.5" step="0.1" value="1">
+  </div>
+  <button id="closeOptions">رجوع</button>
+ </div>
+</div>
+
+<div id="pauseModal" class="modal hide">
+ <div class="panel">
+  <h2>القائمة</h2>
+  <p class="sub" id="pauseName"></p>
+  <div class="stack">
+   <button id="resumeBtn">متابعة اللعب</button>
+   <button class="secondary" id="pauseOptions">الإعدادات</button>
+   <button class="danger" id="exitBtn">العودة للقائمة الرئيسية</button>
+  </div>
+ </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+let playerName='Guest',renderer,scene,camera,clock,player;
+let world=new Map(),selected=0,locked=false,paused=false;
+let yaw=0,pitch=0,keys={},touchMove={forward:0,back:0,left:0,right:0};
+let sens=1,fov=75,velY=0,onGround=true;
+
+const blockTypes=[
+ {name:'عشب',color:0x59a84b,emoji:'🟩'},
+ {name:'تراب',color:0x8a5b38,emoji:'🟫'},
+ {name:'حجر',color:0x858b91,emoji:'⬜'},
+ {name:'حجر مكسر',color:0x686d73,emoji:'🪨'},
+ {name:'طوب',color:0xb35d4e,emoji:'🧱'},
+ {name:'خشب',color:0x9a6a3c,emoji:'🪵'},
+ {name:'رمل',color:0xd9c58a,emoji:'🟨'},
+ {name:'زجاج',color:0x8fd9e8,emoji:'🔹'}
+];
+
+function keyOf(x,y,z){return `${x},${y},${z}`}
+
+function makeBlock(x,y,z,type){
+ let k=keyOf(x,y,z);
+ if(world.has(k))return;
+ let mat=new THREE.MeshLambertMaterial({
+  color:blockTypes[type].color,
+  transparent:type===7,
+  opacity:type===7?.48:1
+ });
+ let mesh=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),mat);
+ mesh.position.set(x,y,z);
+ mesh.userData={x,y,z,type};
+ scene.add(mesh);
+ world.set(k,mesh);
+}
+
+function removeBlock(mesh){
+ let d=mesh.userData;
+ scene.remove(mesh);
+ mesh.geometry.dispose();
+ mesh.material.dispose();
+ world.delete(keyOf(d.x,d.y,d.z));
+}
+
+function buildWorld(){
+ scene=new THREE.Scene();
+ scene.background=new THREE.Color(0x8db9df);
+ scene.fog=new THREE.Fog(0x8db9df,24,70);
+
+ camera=new THREE.PerspectiveCamera(fov,innerWidth/innerHeight,.1,1000);
+ renderer=new THREE.WebGLRenderer({canvas:$('view'),antialias:true});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ renderer.setSize(innerWidth,innerHeight);
+
+ scene.add(new THREE.HemisphereLight(0xffffff,0x58644b,2));
+ let sun=new THREE.DirectionalLight(0xffffff,2.1);
+ sun.position.set(25,40,15);
+ scene.add(sun);
+
+ // أرض مسطحة 41x41
+ for(let x=-20;x<=20;x++){
+  for(let z=-20;z<=20;z++){
+   makeBlock(x,-1,z,0);
+   makeBlock(x,-2,z,1);
+   makeBlock(x,-3,z,1);
+   makeBlock(x,-4,z,2);
+  }
+ }
+
+ // أشجار تجريبية
+ for(const [x,z] of [[-7,-7],[8,-5],[-12,7],[12,10]]){
+  for(let y=0;y<4;y++)makeBlock(x,y,z,5);
+  for(let dx=-2;dx<=2;dx++){
+   for(let dz=-2;dz<=2;dz++){
+    for(let dy=3;dy<=5;dy++){
+     if(Math.abs(dx)+Math.abs(dz)+Math.abs(dy-4)<=4)
+      makeBlock(x+dx,y+dy,z+dz,0);
+    }
+   }
+  }
+ }
+
+ player=new THREE.Object3D();
+ player.position.set(0,1.5,5);
+ scene.add(player);
+ player.add(camera);
+ camera.position.set(0,.55,0);
+ camera.rotation.order='YXZ';
+ clock=new THREE.Clock();
+ window.addEventListener('resize',resize);
+ animate();
+}
+
+function resize(){
+ if(!camera||!renderer)return;
+ camera.aspect=innerWidth/innerHeight;
+ camera.fov=fov;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+}
+
+function animate(){
+ if(!renderer)return;
+ requestAnimationFrame(animate);
+ let dt=Math.min(clock.getDelta(),.05);
+ if(!paused)updatePlayer(dt);
+ renderer.render(scene,camera);
+}
+
+function updatePlayer(dt){
+ let f=(keys.KeyW||keys.ArrowUp?1:0)+touchMove.forward-touchMove.back;
+ let s=(keys.KeyD||keys.ArrowRight?1:0)+touchMove.right-touchMove.left;
+ if(keys.KeyA||keys.ArrowLeft)s-=1;
+ let len=Math.hypot(f,s)||1;
+ f/=len;s/=len;
+ let speed=keys.ShiftLeft?8:5.4;
+ player.position.x+=(Math.sin(yaw)*f+Math.cos(yaw)*s)*speed*dt;
+ player.position.z+=(-Math.cos(yaw)*f+Math.sin(yaw)*s)*speed*dt;
+ velY-=18*dt;
+ player.position.y+=velY*dt;
+ if(player.position.y<=1.5){
+  player.position.y=1.5;
+  velY=0;
+  onGround=true;
+ }
+ player.rotation.y=yaw;
+ camera.rotation.set(pitch,yaw,0,'YXZ');
+}
+
+function jump(){
+ if(onGround){velY=7.2;onGround=false}
+}
+
+const ray=new THREE.Raycaster();
+
+function targetBlock(){
+ ray.setFromCamera(new THREE.Vector2(0,0),camera);
+ return ray.intersectObjects([...world.values()],false).find(h=>h.distance<6);
+}
+
+function breakTarget(){
+ let h=targetBlock();
+ if(h&&h.object.userData.y>=-1)removeBlock(h.object);
+}
+
+function placeTarget(){
+ let h=targetBlock();
+ if(!h)return;
+ let n=h.face.normal.clone().transformDirection(h.object.matrixWorld);
+ let p=h.object.position.clone().add(n);
+ let x=Math.round(p.x),y=Math.round(p.y),z=Math.round(p.z);
+ if(y>24||y<-3)return;
+ if(Math.abs(x-player.position.x)<.8&&Math.abs(z-player.position.z)<.8&&y<player.position.y+1.6&&y+1>player.position.y-.3)return;
+ makeBlock(x,y,z,selected);
+}
+
+function createHotbar(){
+ let bar=$('hotbar');
+ bar.innerHTML='';
+ blockTypes.forEach((b,i)=>{
+  let el=document.createElement('div');
+  el.className='slot'+(i===selected?' active':'');
+  el.innerHTML=b.emoji+`<span>${i+1}</span>`;
+  el.onclick=()=>{selected=i;createHotbar()};
+  bar.append(el);
+ });
+}
+
+function enterGame(){
+ playerName=$('playerName').value.trim()||'Guest';
+ $('playerLabel').textContent=playerName;
+ $('mainMenu').classList.add('hide');
+ $('game').classList.remove('hide');
+ if(!renderer)buildWorld();
+ createHotbar();
+ paused=false;
+ $('pauseModal').classList.add('hide');
+}
+
+$('guestPlay').onclick=enterGame;
+$('optionsBtn').onclick=()=> $('optionsModal').classList.remove('hide');
+$('closeOptions').onclick=()=> $('optionsModal').classList.add('hide');
+
+$('fov').oninput=e=>{
+ fov=+e.target.value;
+ $('fovVal').textContent=fov;
+ if(camera){camera.fov=fov;camera.updateProjectionMatrix()}
+};
+
+$('sens').oninput=e=>{
+ sens=+e.target.value;
+ $('sensVal').textContent=sens;
+};
+
+$('menuBtn').onclick=()=>{
+ paused=true;
+ $('pauseName').textContent='اللاعب: '+playerName;
+ $('pauseModal').classList.remove('hide');
+};
+
+$('resumeBtn').onclick=()=>{
+ paused=false;
+ $('pauseModal').classList.add('hide');
+};
+
+$('pauseOptions').onclick=()=>{
+ $('pauseModal').classList.add('hide');
+ $('optionsModal').classList.remove('hide');
+};
+
+$('exitBtn').onclick=()=>{
+ $('pauseModal').classList.add('hide');
+ $('game').classList.add('hide');
+ $('mainMenu').classList.remove('hide');
+ paused=true;
+};
+
+$('breakBtn').onclick=breakTarget;
+$('placeBtn').onclick=placeTarget;
+
+window.addEventListener('keydown',e=>{
+ keys[e.code]=true;
+ if(e.code==='Space'){e.preventDefault();jump()}
+ if(/^Digit[1-8]$/.test(e.code)){
+  selected=+e.code.slice(5)-1;
+  createHotbar();
+ }
+});
+window.addEventListener('keyup',e=>keys[e.code]=false);
+
+// Mouse camera
+$('view').addEventListener('click',()=>{
+ if(!paused&&renderer&&innerWidth>800&&renderer.domElement.requestPointerLock)
+  renderer.domElement.requestPointerLock();
+});
+document.addEventListener('pointerlockchange',()=>{
+ locked=document.pointerLockElement===$('view');
+});
+document.addEventListener('mousemove',e=>{
+ if(locked&&!paused){
+  yaw-=e.movementX*.002*sens;
+  pitch-=e.movementY*.002*sens;
+  pitch=Math.max(-1.48,Math.min(1.48,pitch));
+ }
+});
+
+// Touch camera swipe
+let lastTouch=null;
+$('view').addEventListener('touchstart',e=>{
+ if(e.touches.length===1)
+  lastTouch={x:e.touches[0].clientX,y:e.touches[0].clientY};
+},{passive:true});
+
+$('view').addEventListener('touchmove',e=>{
+ if(e.touches.length===1&&lastTouch){
+  let t=e.touches[0];
+  let dx=t.clientX-lastTouch.x,dy=t.clientY-lastTouch.y;
+  yaw-=dx*.006*sens;
+  pitch-=dy*.006*sens;
+  pitch=Math.max(-1.45,Math.min(1.45,pitch));
+  lastTouch={x:t.clientX,y:t.clientY};
+ }
+},{passive:true});
+$('view').addEventListener('touchend',()=>lastTouch=null);
+
+// Mobile movement controls
+$('pad').querySelectorAll('[data-move]').forEach(btn=>{
+ let action=btn.dataset.move;
+ const start=e=>{
+  e.preventDefault();
+  if(action==='jump')jump();
+  else touchMove[action]=1;
+ };
+ const end=e=>{
+  e.preventDefault();
+  if(action!=='jump')touchMove[action]=0;
+ };
+ btn.addEventListener('pointerdown',start);
+ btn.addEventListener('pointerup',end);
+ btn.addEventListener('pointercancel',end);
+ btn.addEventListener('pointerleave',end);
+});
+})();
+</script>
+</body>
+</html>
